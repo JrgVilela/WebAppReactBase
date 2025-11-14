@@ -6,6 +6,18 @@ const userService = {
     return response.data;
   },
 
+  getUsersPaginated: async (page, limit, searchText) => {
+    let response = null;
+    if (searchText)
+      response = await api.get(
+        `/users/search?s=${searchText}&page=${page}&limit=${limit}`
+      );
+    else response = await api.get(`/users?page=${page}&limit=${limit}`);
+
+    if (response) return response.data;
+    else throw new Error("Erro ao buscar usuários");
+  },
+
   // para os próximos passos
   getById: (id) => api.get(`/users/${id}`),
   create: (data) => api.post("/users", data),

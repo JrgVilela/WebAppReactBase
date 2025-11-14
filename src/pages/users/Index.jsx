@@ -11,13 +11,17 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import { DataGrid } from "@mui/x-data-grid";
+import { DataGrid, GridToolbar } from "@mui/x-data-grid";
 import { Add, Edit, Delete } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import userService from "../../services/userService";
 
 export default function UserIndex() {
+  const [page, setPage] = useState(0); // MUI começa em 0
+  const [pageSize, setPageSize] = useState(25);
+  const [total, setTotal] = useState(0);
+  const [searchText, setSearchText] = useState("");
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
@@ -34,9 +38,15 @@ export default function UserIndex() {
 
   const fetchUsers = async () => {
     setLoading(true);
+    debugger;
     try {
-      const data = await userService.getAll();
-      setUsers(data);
+      const res = await userService.getUsersPaginated(
+        page + 1,
+        pageSize,
+        searchText
+      );
+      setUsers(res.users); // ou res.data.data, depende do retorno
+      setTotal(res.total); // ou res.data.count, etc
     } catch (error) {
       toast.error("Erro ao carregar usuários");
     } finally {
@@ -46,7 +56,7 @@ export default function UserIndex() {
 
   useEffect(() => {
     fetchUsers();
-  }, []);
+  }, [page, pageSize, searchText]);
 
   const columns = [
     { field: "id", headerName: "ID", width: 90 },
@@ -113,6 +123,12 @@ export default function UserIndex() {
       <div style={{ height: 500, width: "100%" }}>
         <DataGrid
           rows={users}
+          columns={columns}
+          rowCount={total}
+          loading={loading}
+          pageSizeOptions={[25, 50, 100]}
+          paginationModel={{ page, pageSize }}
+          paginationMode="server"
           initialState={{
             columns: {
               columnVisibilityModel: {
@@ -120,11 +136,11 @@ export default function UserIndex() {
               },
             },
           }}
-          columns={columns}
-          loading={loading}
-          pageSizeOptions={[25, 50, 100]}
-          paginationModel={paginationModel}
-          onPaginationModelChange={setPaginationModel}
+          onPaginationModelChange={(model) => {
+            setPage(model.page);
+            setPageSize(model.pageSize);
+          }}
+          getRowId={(row) => row.id}
           columnHeaderHeight={36}
           rowHeight={40}
           showToolbar
@@ -132,6 +148,13 @@ export default function UserIndex() {
             setSelectedUserId(newSelection);
           }}
           rowSelectionModel={selectedUserId}
+          disableSelectionOnClick
+          checkboxSelection
+          onFilterModelChange={(model) => {
+            const value = model.quickFilterValues?.[0] || "";
+            setSearchText(value);
+          }}
+          //slots={{ toolbar: GridToolbar }}
         />
         <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
           <DialogTitle>Confirmar Exclusão</DialogTitle>
